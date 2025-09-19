@@ -1,0 +1,74 @@
+Syntax : Syntax : ansible <host-pattern> -m <module> -a "<arguments>" [options]
+
+* using ansible adhoc command you can use one module at a time in adhoc command 
+
+> Option that we can use in AdHoc Command 
+<host-pattern> → which hosts (from inventory) to run on (all, localhost, group, or specific IP).
+-m <module> → module name (e.g. ping, command, copy, yum).
+-a "<arguments>" → arguments to pass to module.
+-u <username> → remote user.
+-k → ask SSH password (when no key-based auth).
+-b → become root (privilege escalation).
+--ask-become-pass → ask sudo password.
+-i <inventory> → specify custom inventory file.
+-f <forks> → number of parallel hosts.
+--limit <pattern> → restrict to a subset of hosts.
+-t <dir> → store output in a directory (useful for logs).
+--check → dry run (simulate).
+-o → one-line output format.
+-v / -vvv → verbose output (debugging).
+
+1. ping the host machine :             cmd:  ansible all -m ping
+2. Run a simple command :              cmd : ansible all -m command -a "uptime"
+3. Use shell (for complex commands):   cmd: ansible all -m shell -a "df -h && free -m && uptime"
+4. Run with a specific user:           cmd: ansible all -m command -a "whoami" -u arman
+5. Run with root privilege:            cmd: ansible all -m command -a "cat /etc/shadow" -b2.
+
+> Adhoc Command dealing with the file and copy module
+1. Create a file:                     cmd: ansible all -m file -a "path=/tmp/testfile state=touch"
+                                      cmd: ansible all -m file -a "path=/tmp/newdir state=directory owner=arman group=arman mode=0755"
+2. Delete a file :                    cmd: ansible all -m file -a "path=/tmp/testfile state=absent"
+   Symlink a file :                   cmd: ansible all -m file -a "src=/var/log/nginx path=/tmp/nginx_logs state=link"
+3. Copy file :                        cmd: ansible all -m copy -a "src=/home/arman/test.conf dest=/etc/test.conf owner=root group=root mode=0644 backup=yes force=yes"
+4. Archive (tar.gz):                  cmd: ansible all -m archive -a "path=/var/log dest=/tmp/logs.tar.gz"
+
+
+3. Package Management
+1. Install multiple package                cmd : ansible all -m yum -a "name=nginx state=present" -b, ansible all -m yum -a "name=nginx,git,wget state=present"
+                                           cmd: ansible all -m yum -a "name=nginx state=present enablerepo=epel"
+2. Remove package                          cmd:  ansible all -m yum -a "name=nginx state=absent" -b
+3. Update all packages                     cmd: ansible all -m yum -a "name=* state=latest" -b
+
+✅ 4. Service Management
+🔹 Start service                            cmd: ansible all -m service -a "name=nginx state=started enabled=yes" -b
+🔹 Stop service                             cmd: ansible all -m service -a "name=nginx state=stopped" -b
+🔹 Restart service                          cmd: ansible all -m service -a "name=nginx state=restarted" -b
+
+✅ 5. User and Permission Management
+🔹 Create a user                            cmd: ansible all -m user -a "name=devuser state=present", ansible all -m user -a "name=devuser state=present groups=wheel shell=/bin/bash"
+🔹 Delete a user                            cmd: ansible all -m user -a "name=devuser state=absent",  ansible all -m user -a "name=devuser state=absent remove=yes"
+🔹 Change permissions                       cmd: ansible all -m file -a "path=/tmp/testfile mode=0777"
+
+✅ 6. System Info & Checks
+🔹 Check disk, memory, uptime              cmd: ansible all -m shell -a "df -h && free -m && uptime"
+🔹 Gather all facts                        cmd: ansible all -m setup
+🔹 Display only memory fact                cmd: ansible all -m setup -a "filter=ansible_memtotal_mb"
+
+✅ 7. Advanced Ad-hoc Commands
+🔹 Multiple actions in one command         cmd: ansible all -m shell -a "yum install -y nginx && systemctl enable --now nginx && df -h && free -m"
+🔹 Limit hosts                             cmd: ansible all -m ping --limit "webserver1"
+🔹 Use custom inventory                    cmd: ansible all -i /path/to/inventory -m ping
+🔹 Parallel execution (20 hosts at once)   cmd: ansible all -m command -a "uptime" -f 20
+🔹 Dry run (check mode)                    cmd: ansible all -m yum -a "name=nginx state=present" --check
+🔹 Save output in a directory              cmd: ansible all -m shell -a "df -h" -t /tmp/output
+🔹 Verbose debugging                        cmd: ansible all -m command -a "ls /" -vvv
+ 🔹Install package + enable service + run health check  cmd: ansible all -m shell -a "yum install -y nginx && systemctl enable --now nginx && systemctl status nginx && df -h && free -m && uptime" -b
+
+2. Copy config file, backup, restart service
+ansible all -m copy -a "src=/home/arman/nginx.conf dest=/etc/nginx/nginx.conf owner=root group=root mode=0644 backup=yes force=yes" -b \
+&& ansible all -m service -a "name=nginx state=restarted" -b
+
+3. Create multiple users with loop (using shell loop in adhoc)
+ansible all -m shell -a "for u in dev test qa; do useradd $u; done" -b
+
+
